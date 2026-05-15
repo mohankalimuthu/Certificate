@@ -1,0 +1,98 @@
+<!-- dashboard.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Dashboard</title>
+
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+
+        <div class="dashboard-card">
+
+            <h1>Certificate Dashboard</h1>
+            <p>Generate Internship Certificate</p>
+
+            <form id="certificateForm">
+
+                <div class="input-group">
+                    <label>Candidate Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        placeholder="Enter Candidate Name"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label>Domain</label>
+                    <input
+                        type="text"
+                        id="domain"
+                        placeholder="Enter Domain"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label>Mark</label>
+                    <input
+                        type="number"
+                        id="mark"
+                        placeholder="Enter Mark"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label>Domain Code</label>
+                    <input
+                        type="text"
+                        id="domain_code"
+                        placeholder="Enter Domain Code"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label>Batch</label>
+                    <input
+                        type="text"
+                        id="batch"
+                        placeholder="Enter Batch"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label>Group</label>
+                    <input
+                        type="text"
+                        id="group"
+                        placeholder="Enter Group"
+                        required
+                    >
+                </div>
+
+                <button type="submit">
+                    Generate Certificate
+                </button>
+
+            </form>
+
+            <div id="result"></div>
+
+        </div>
+
+    </div>
+
+    <script src="dashboard.js"></script>
+
+</body>
+</html>

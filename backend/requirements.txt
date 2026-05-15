@@ -1,4 +1,6 @@
 Flask
-Flask-Cors
-Pillow
+flask-cors
+pillow
+python-dotenv
+reportlab
 gunicorn
