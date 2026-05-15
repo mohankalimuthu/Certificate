@@ -86,3 +86,27 @@ button:hover{
     margin-top:20px;
     text-align:center;
 }
+
+.input-group select{
+
+    width:100%;
+
+    padding:12px;
+
+    border:1px solid #ccc;
+
+    border-radius:8px;
+
+    font-size:15px;
+
+    background:white;
+
+    cursor:pointer;
+}
+
+.input-group select:focus{
+
+    outline:none;
+
+    border-color:#1e3c72;
+}

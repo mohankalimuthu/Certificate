@@ -44,6 +44,7 @@ os.makedirs(PDF_FOLDER, exist_ok=True)
 ADMIN_ID = os.getenv("ADMIN_ID")
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+FONT_PATH = os.path.join(BASE_DIR, "timesbd.ttf")
 
 # =========================
 # DATABASE
@@ -196,13 +197,13 @@ def generate_certificate():
     # FONTS
     # =========================
 
-    font_name = ImageFont.truetype("timesbd.ttf", 82)
+    font_name = ImageFont.truetype(FONT_PATH, 82)
 
-    font_domain = ImageFont.truetype("timesbd.ttf", 42)
+    font_domain = ImageFont.truetype(FONT_PATH, 42)
 
-    font_mark = ImageFont.truetype("timesbd.ttf", 42)
+    font_mark = ImageFont.truetype(FONT_PATH, 42)
 
-    font_small = ImageFont.truetype("timesbd.ttf", 32)
+    font_small = ImageFont.truetype(FONT_PATH, 32)
 
     # =========================
     # NAME CENTER ALIGN
