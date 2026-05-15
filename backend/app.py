@@ -44,7 +44,7 @@ os.makedirs(PDF_FOLDER, exist_ok=True)
 ADMIN_ID = os.getenv("ADMIN_ID")
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
-FONT_PATH = os.path.join(BASE_DIR, "timesbd.ttf")
+FONT_PATH = os.path.join(BASE_DIR, "timesbd0.ttf")
 
 # =========================
 # DATABASE
