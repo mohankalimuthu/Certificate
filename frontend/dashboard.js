@@ -59,3 +59,10 @@ form.addEventListener("submit", async (e) => {
     }
 
 });
+
+const isLoggedIn = localStorage.getItem("admin_logged_in");
+
+if(isLoggedIn !== "true"){
+
+    window.location.href = "admin.html";
+}

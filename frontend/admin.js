@@ -33,7 +33,8 @@ loginForm.addEventListener('submit', async (e) => {
             localStorage.setItem('adminLoggedIn', true);
 
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
+                localStorage.setItem("admin_logged_in", "true");
+                window.location.href = "dashboard.html";
             }, 1000);
 
         } else {

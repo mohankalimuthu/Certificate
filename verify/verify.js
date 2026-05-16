@@ -1,7 +1,7 @@
 // verify.js
 
-const API_URL = "http://127.0.0.1:5000";
-//  https://mcq-certificate-oo0j.onrender.com
+const API_URL = "https://mcq-certificate-oo0j.onrender.com";
+
 async function verifyCertificate(){
 
     const certificate_id = document.getElementById("certificate_id").value;

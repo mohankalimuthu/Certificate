@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image, ImageDraw, ImageFont
 from dotenv import load_dotenv
@@ -6,7 +6,11 @@ from datetime import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
-import sqlite3
+from pymongo import MongoClient
+
+import cloudinary
+import cloudinary.uploader
+
 import random
 import os
 
@@ -22,75 +26,47 @@ load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 # =========================
 # CONFIG
 # =========================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DATABASE = os.path.join(BASE_DIR, "database.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 CERTIFICATE_TEMPLATE = os.path.join(BASE_DIR, "intern.png")
 
-OUTPUT_FOLDER =  os.path.join(BASE_DIR, "generated")
+FONT_PATH = os.path.join(BASE_DIR, "timesbd0.ttf")
 
-PDF_FOLDER =  os.path.join(BASE_DIR, "pdfs")
+TEMP_FOLDER = os.path.join(BASE_DIR, "temp")
 
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-os.makedirs(PDF_FOLDER, exist_ok=True)
+os.makedirs(TEMP_FOLDER, exist_ok=True)
 
 ADMIN_ID = os.getenv("ADMIN_ID")
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
-FONT_PATH = os.path.join(BASE_DIR, "timesbd0.ttf")
 
 # =========================
-# DATABASE
+# MONGODB
 # =========================
 
-def init_db():
+MONGODB_URI = os.getenv("MONGODB_URI")
 
-    conn = sqlite3.connect(DATABASE)
+client = MongoClient(MONGODB_URI)
 
-    cursor = conn.cursor()
+db = client["certificate_db"]
 
-    cursor.execute("""
+certificates = db["certificates"]
 
-        CREATE TABLE IF NOT EXISTS certificates(
+# =========================
+# CLOUDINARY
+# =========================
 
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-            name TEXT,
-
-            domain TEXT,
-
-            mark TEXT,
-
-            domain_code TEXT,
-
-            batch TEXT,
-
-            student_group TEXT,
-
-            certificate_id TEXT UNIQUE,
-
-            issue_date TEXT,
-
-            file_path TEXT,
-
-            pdf_path TEXT
-
-        )
-
-    """)
-
-    conn.commit()
-
-    conn.close()
-
-init_db()
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 # =========================
 # HOME
@@ -100,9 +76,7 @@ init_db()
 def home():
 
     return jsonify({
-
         "message": "Backend Running Successfully"
-
     })
 
 # =========================
@@ -121,19 +95,13 @@ def admin_login():
     if admin_id == ADMIN_ID and password == ADMIN_PASSWORD:
 
         return jsonify({
-
             "success": True,
-
             "message": "Login Successful"
-
         })
 
     return jsonify({
-
         "success": False,
-
         "message": "Invalid Admin ID or Password"
-
     }), 401
 
 # =========================
@@ -143,302 +111,260 @@ def admin_login():
 @app.route('/generate-certificate', methods=['POST'])
 def generate_certificate():
 
-    data = request.json
+    try:
 
-    name = data['name']
+        data = request.json
 
-    domain = data['domain']
+        name = data['name']
 
-    mark = data['mark']
+        domain = data['domain']
 
-    domain_code = data['domain_code']
+        mark = data['mark']
 
-    batch = data['batch']
+        domain_code = data['domain_code']
 
-    student_group = data['group']
+        batch = data['batch']
 
-    # =========================
-    # CERTIFICATE ID
-    # =========================
+        student_group = data['group']
 
-    year = datetime.now().strftime("%Y")
+        # =========================
+        # CERTIFICATE ID
+        # =========================
 
-    month = datetime.now().strftime("%m")
+        year = datetime.now().strftime("%Y")
 
-    personal_number = random.randint(10, 99)
+        month = datetime.now().strftime("%m")
 
-    certificate_id = (
+        personal_number = random.randint(10, 99)
 
-        f"NPE-"
-        f"{year}-"
-        f"{batch}"
-        f"{domain_code}"
-        f"{month}"
-        f"{student_group}-"
-        f"{mark}"
-        f"{personal_number}"
-    )
+        certificate_id = (
+            f"NPE-"
+            f"{year}-"
+            f"{batch}"
+            f"{domain_code}"
+            f"{month}"
+            f"{student_group}-"
+            f"{mark}"
+            f"{personal_number}"
+        )
 
-    # =========================
-    # ISSUE DATE
-    # =========================
+        # =========================
+        # ISSUE DATE
+        # =========================
 
-    issue_date = datetime.now().strftime("%d-%m-%Y")
+        issue_date = datetime.now().strftime("%d-%m-%Y")
 
-    # =========================
-    # OPEN CERTIFICATE
-    # =========================
+        # =========================
+        # OPEN TEMPLATE
+        # =========================
 
-    image = Image.open(CERTIFICATE_TEMPLATE)
+        image = Image.open(CERTIFICATE_TEMPLATE)
 
-    draw = ImageDraw.Draw(image)
+        draw = ImageDraw.Draw(image)
 
-    # =========================
-    # FONTS
-    # =========================
+        # =========================
+        # FONTS
+        # =========================
 
-    font_name = ImageFont.truetype(FONT_PATH, 82)
+        font_name = ImageFont.truetype(FONT_PATH, 82)
 
-    font_domain = ImageFont.truetype(FONT_PATH, 42)
+        font_domain = ImageFont.truetype(FONT_PATH, 42)
 
-    font_mark = ImageFont.truetype(FONT_PATH, 42)
+        font_mark = ImageFont.truetype(FONT_PATH, 42)
 
-    font_small = ImageFont.truetype(FONT_PATH, 32)
+        font_small = ImageFont.truetype(FONT_PATH, 32)
 
-    # =========================
-    # NAME CENTER ALIGN
-    # =========================
+        # =========================
+        # NAME
+        # =========================
 
-    name_bbox = draw.textbbox((0, 0), name, font=font_name)
+        name_bbox = draw.textbbox((0, 0), name, font=font_name)
 
-    name_width = name_bbox[2] - name_bbox[0]
+        name_width = name_bbox[2] - name_bbox[0]
 
-    x_name = (image.width - name_width) / 2
+        x_name = (image.width - name_width) / 2
 
-    draw.text(
-
-        (x_name, 690),
-
-        name,
-
-        fill="black",
-
-        font=font_name
-    )
-
-    # =========================
-    # DOMAIN CENTER ALIGN
-    # =========================
-
-    domain_bbox = draw.textbbox((0, 0), domain, font=font_domain)
-
-    domain_width = domain_bbox[2] - domain_bbox[0]
-
-    center_x = 1100
-
-    x_domain = center_x - (domain_width / 2)
-
-    draw.text(
-
-        (x_domain, 865),
-
-        domain,
-
-        fill="black",
-
-        font=font_domain
-    )
-
-    # =========================
-    # MARK
-    # =========================
-
-    draw.text(
-
-        (853, 922),
-
-        str(mark),
-
-        fill="black",
-
-        font=font_mark
-    )
-
-    # =========================
-    # CERTIFICATE ID
-    # =========================
-
-    draw.text(
-
-        (198, 1262),
-
-        f"Certificate ID : {certificate_id}",
-
-        fill="black",
-
-        font=font_small
-    )
-
-    # =========================
-    # ISSUE DATE
-    # =========================
-
-    draw.text(
-
-        (1450, 1262),
-
-        f"Date of Issue : {issue_date}",
-
-        fill="black",
-
-        font=font_small
-    )
-
-    # =========================
-    # SAVE IMAGE
-    # =========================
-
-    file_name = f"{certificate_id}.png"
-
-    file_path = os.path.abspath(
-
-        os.path.join(OUTPUT_FOLDER, file_name)
-
-    )
-
-    image.save(file_path)
-
-    image.close()
-
-    # =========================
-    # CREATE PDF
-    # =========================
-
-    pdf_name = f"{certificate_id}.pdf"
-
-    pdf_path = os.path.abspath(
-
-        os.path.join(PDF_FOLDER, pdf_name)
-
-    )
-
-    c = canvas.Canvas(
-
-        pdf_path,
-
-        pagesize=(image.width, image.height)
-    )
-
-    certificate_image = ImageReader(file_path)
-
-    c.drawImage(
-
-        certificate_image,
-
-        0,
-
-        0,
-
-        width=image.width,
-
-        height=image.height
-    )
-
-    c.save()
-
-    # =========================
-    # SAVE DATABASE
-    # =========================
-
-    conn = sqlite3.connect(DATABASE)
-
-    cursor = conn.cursor()
-
-    cursor.execute("""
-
-        INSERT INTO certificates(
-
+        draw.text(
+            (x_name, 690),
             name,
+            fill="black",
+            font=font_name
+        )
+
+        # =========================
+        # DOMAIN
+        # =========================
+
+        domain_bbox = draw.textbbox((0, 0), domain, font=font_domain)
+
+        domain_width = domain_bbox[2] - domain_bbox[0]
+
+        center_x = 1100
+
+        x_domain = center_x - (domain_width / 2)
+
+        draw.text(
+            (x_domain, 865),
             domain,
-            mark,
-            domain_code,
-            batch,
-            student_group,
-            certificate_id,
-            issue_date,
-            file_path,
-            pdf_path
-
+            fill="black",
+            font=font_domain
         )
 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        # =========================
+        # MARK
+        # =========================
 
-    """, (
-
-        name,
-        domain,
-        mark,
-        domain_code,
-        batch,
-        student_group,
-        certificate_id,
-        issue_date,
-        file_path,
-        pdf_path
-    ))
-
-    conn.commit()
-
-    conn.close()
-
-    return jsonify({
-
-        "success": True,
-
-        "certificate_id": certificate_id,
-
-        "download_url": f"/download-pdf/{certificate_id}"
-    })
-
-# =========================
-# DOWNLOAD PDF
-# =========================
-
-@app.route('/download-pdf/<certificate_id>')
-def download_pdf(certificate_id):
-
-    conn = sqlite3.connect(DATABASE)
-
-    cursor = conn.cursor()
-
-    cursor.execute("""
-
-        SELECT pdf_path
-
-        FROM certificates
-
-        WHERE certificate_id = ?
-
-    """, (certificate_id,))
-
-    result = cursor.fetchone()
-
-    conn.close()
-
-    if result:
-        return send_file(
-            result[0],
-            as_attachment=True,
-            mimetype='application/pdf'
+        draw.text(
+            (853, 922),
+            str(mark),
+            fill="black",
+            font=font_mark
         )
 
-    return jsonify({
+        # =========================
+        # CERTIFICATE ID
+        # =========================
 
-        "success": False,
+        draw.text(
+            (198, 1262),
+            f"Certificate ID : {certificate_id}",
+            fill="black",
+            font=font_small
+        )
 
-        "message": "PDF Not Found"
+        # =========================
+        # ISSUE DATE
+        # =========================
 
-    })
+        draw.text(
+            (1450, 1262),
+            f"Date of Issue : {issue_date}",
+            fill="black",
+            font=font_small
+        )
+
+        # =========================
+        # SAVE PNG TEMP
+        # =========================
+
+        image_path = os.path.join(
+            TEMP_FOLDER,
+            f"{certificate_id}.png"
+        )
+
+        image.save(image_path)
+
+        image.close()
+
+        # =========================
+        # CREATE PDF
+        # =========================
+
+        pdf_path = os.path.join(
+            TEMP_FOLDER,
+            f"{certificate_id}.pdf"
+        )
+
+        c = canvas.Canvas(
+            pdf_path,
+            pagesize=(image.width, image.height)
+        )
+
+        certificate_image = ImageReader(image_path)
+
+        c.drawImage(
+            certificate_image,
+            0,
+            0,
+            width=image.width,
+            height=image.height
+        )
+
+        c.save()
+
+        # =========================
+        # UPLOAD PNG TO CLOUDINARY
+        # =========================
+
+        png_upload = cloudinary.uploader.upload(
+            image_path,
+            folder="certificates/images",
+            resource_type="image"
+        )
+
+        # =========================
+        # UPLOAD PDF TO CLOUDINARY
+        # =========================
+
+        pdf_upload = cloudinary.uploader.upload(
+            pdf_path,
+            folder="certificates/pdfs",
+            resource_type="raw"
+        )
+
+        image_url = png_upload["secure_url"]
+
+        pdf_url = pdf_upload["secure_url"]
+
+        # =========================
+        # SAVE TO MONGODB
+        # =========================
+
+        certificate_data = {
+
+            "name": name,
+
+            "domain": domain,
+
+            "mark": mark,
+
+            "domain_code": domain_code,
+
+            "batch": batch,
+
+            "student_group": student_group,
+
+            "certificate_id": certificate_id,
+
+            "issue_date": issue_date,
+
+            "image_url": image_url,
+
+            "pdf_url": pdf_url
+        }
+
+        certificates.insert_one(certificate_data)
+
+        # =========================
+        # DELETE TEMP FILES
+        # =========================
+
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
+
+        return jsonify({
+
+            "success": True,
+
+            "certificate_id": certificate_id,
+
+            "image_url": image_url,
+
+            "pdf_url": pdf_url
+        })
+
+    except Exception as e:
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(e)
+
+        }), 500
 
 # =========================
 # VERIFY CERTIFICATE
@@ -447,49 +373,33 @@ def download_pdf(certificate_id):
 @app.route('/verify/<certificate_id>', methods=['GET'])
 def verify_certificate(certificate_id):
 
-    conn = sqlite3.connect(DATABASE)
+    certificate = certificates.find_one({
 
-    cursor = conn.cursor()
+        "certificate_id": certificate_id
 
-    cursor.execute("""
+    })
 
-        SELECT
-            name,
-            domain,
-            mark,
-            batch,
-            student_group,
-            issue_date
-
-        FROM certificates
-
-        WHERE certificate_id = ?
-
-    """, (certificate_id,))
-
-    result = cursor.fetchone()
-
-    conn.close()
-
-    if result:
+    if certificate:
 
         return jsonify({
 
             "success": True,
 
-            "name": result[0],
+            "name": certificate["name"],
 
-            "domain": result[1],
+            "domain": certificate["domain"],
 
-            "mark": result[2],
+            "mark": certificate["mark"],
 
-            "batch": result[3],
+            "batch": certificate["batch"],
 
-            "group": result[4],
+            "group": certificate["student_group"],
 
-            "issue_date": result[5],
+            "issue_date": certificate["issue_date"],
 
-            "download_url": f"/download-pdf/{certificate_id}"
+            "image_url": certificate["image_url"],
+
+            "pdf_url": certificate["pdf_url"]
         })
 
     return jsonify({
@@ -501,6 +411,21 @@ def verify_certificate(certificate_id):
     })
 
 # =========================
+# ALL CERTIFICATES
+# =========================
+
+@app.route('/all-certificates', methods=['GET'])
+def all_certificates():
+
+    all_data = list(certificates.find({}, {
+
+        "_id": 0
+
+    }))
+
+    return jsonify(all_data)
+
+# =========================
 # MAIN
 # =========================
 
@@ -508,4 +433,7 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5000))
 
-    app.run(host="0.0.0.0", port=port)
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
