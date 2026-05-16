@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from datetime import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
-
 from pymongo import MongoClient
 
 import cloudinary
@@ -34,11 +33,20 @@ CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-CERTIFICATE_TEMPLATE = os.path.join(BASE_DIR, "intern.png")
+CERTIFICATE_TEMPLATE = os.path.join(
+    BASE_DIR,
+    "intern.png"
+)
 
-FONT_PATH = os.path.join(BASE_DIR, "timesbd0.ttf")
+FONT_PATH = os.path.join(
+    BASE_DIR,
+    "timesbd0.ttf"
+)
 
-TEMP_FOLDER = os.path.join(BASE_DIR, "temp")
+TEMP_FOLDER = os.path.join(
+    BASE_DIR,
+    "temp"
+)
 
 os.makedirs(TEMP_FOLDER, exist_ok=True)
 
@@ -63,19 +71,31 @@ certificates = db["certificates"]
 # =========================
 
 cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+
+    cloud_name=os.getenv(
+        "CLOUDINARY_CLOUD_NAME"
+    ),
+
+    api_key=os.getenv(
+        "CLOUDINARY_API_KEY"
+    ),
+
+    api_secret=os.getenv(
+        "CLOUDINARY_API_SECRET"
+    )
 )
 
 # =========================
 # HOME
 # =========================
 
-@app.route('/')
+@app.route("/")
 def home():
 
     return jsonify({
+
+        "success": True,
+
         "message": "Backend Running Successfully"
     })
 
@@ -83,49 +103,79 @@ def home():
 # ADMIN LOGIN
 # =========================
 
-@app.route('/admin-login', methods=['POST'])
+@app.route(
+    "/admin-login",
+    methods=["POST"]
+)
 def admin_login():
 
-    data = request.json
+    try:
 
-    admin_id = data.get('admin_id')
+        data = request.get_json()
 
-    password = data.get('password')
+        admin_id = data.get("admin_id")
 
-    if admin_id == ADMIN_ID and password == ADMIN_PASSWORD:
+        password = data.get("password")
+
+        if (
+            admin_id == ADMIN_ID and
+            password == ADMIN_PASSWORD
+        ):
+
+            return jsonify({
+
+                "success": True,
+
+                "message": "Login Successful"
+            })
 
         return jsonify({
-            "success": True,
-            "message": "Login Successful"
-        })
 
-    return jsonify({
-        "success": False,
-        "message": "Invalid Admin ID or Password"
-    }), 401
+            "success": False,
+
+            "message": "Invalid Admin ID or Password"
+
+        }), 401
+
+    except Exception as e:
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(e)
+
+        }), 500
 
 # =========================
 # GENERATE CERTIFICATE
 # =========================
 
-@app.route('/generate-certificate', methods=['POST'])
+@app.route(
+    "/generate-certificate",
+    methods=["POST"]
+)
 def generate_certificate():
 
     try:
 
-        data = request.json
+        data = request.get_json()
 
-        name = data['name']
+        # =========================
+        # INPUTS
+        # =========================
 
-        domain = data['domain']
+        name = data["name"].strip()
 
-        mark = data['mark']
+        domain = data["domain"].strip()
 
-        domain_code = data['domain_code']
+        mark = str(data["mark"]).strip()
 
-        batch = data['batch']
+        domain_code = data["domain_code"].strip()
 
-        student_group = data['group']
+        batch = data["batch"].strip()
+
+        student_group = data["group"].strip()
 
         # =========================
         # CERTIFICATE ID
@@ -138,6 +188,7 @@ def generate_certificate():
         personal_number = random.randint(10, 99)
 
         certificate_id = (
+
             f"NPE-"
             f"{year}-"
             f"{batch}"
@@ -152,13 +203,17 @@ def generate_certificate():
         # ISSUE DATE
         # =========================
 
-        issue_date = datetime.now().strftime("%d-%m-%Y")
+        issue_date = datetime.now().strftime(
+            "%d-%m-%Y"
+        )
 
         # =========================
         # OPEN TEMPLATE
         # =========================
 
-        image = Image.open(CERTIFICATE_TEMPLATE)
+        image = Image.open(
+            CERTIFICATE_TEMPLATE
+        ).convert("RGB")
 
         draw = ImageDraw.Draw(image)
 
@@ -166,28 +221,55 @@ def generate_certificate():
         # FONTS
         # =========================
 
-        font_name = ImageFont.truetype(FONT_PATH, 82)
+        font_name = ImageFont.truetype(
+            FONT_PATH,
+            82
+        )
 
-        font_domain = ImageFont.truetype(FONT_PATH, 42)
+        font_domain = ImageFont.truetype(
+            FONT_PATH,
+            42
+        )
 
-        font_mark = ImageFont.truetype(FONT_PATH, 42)
+        font_mark = ImageFont.truetype(
+            FONT_PATH,
+            42
+        )
 
-        font_small = ImageFont.truetype(FONT_PATH, 32)
+        font_small = ImageFont.truetype(
+            FONT_PATH,
+            32
+        )
 
         # =========================
         # NAME
         # =========================
 
-        name_bbox = draw.textbbox((0, 0), name, font=font_name)
+        name_bbox = draw.textbbox(
 
-        name_width = name_bbox[2] - name_bbox[0]
+            (0, 0),
 
-        x_name = (image.width - name_width) / 2
+            name,
+
+            font=font_name
+        )
+
+        name_width = (
+            name_bbox[2] - name_bbox[0]
+        )
+
+        x_name = (
+            image.width - name_width
+        ) / 2
 
         draw.text(
+
             (x_name, 690),
+
             name,
+
             fill="black",
+
             font=font_name
         )
 
@@ -195,18 +277,33 @@ def generate_certificate():
         # DOMAIN
         # =========================
 
-        domain_bbox = draw.textbbox((0, 0), domain, font=font_domain)
+        domain_bbox = draw.textbbox(
 
-        domain_width = domain_bbox[2] - domain_bbox[0]
+            (0, 0),
+
+            domain,
+
+            font=font_domain
+        )
+
+        domain_width = (
+            domain_bbox[2] - domain_bbox[0]
+        )
 
         center_x = 1100
 
-        x_domain = center_x - (domain_width / 2)
+        x_domain = center_x - (
+            domain_width / 2
+        )
 
         draw.text(
+
             (x_domain, 865),
+
             domain,
+
             fill="black",
+
             font=font_domain
         )
 
@@ -215,9 +312,13 @@ def generate_certificate():
         # =========================
 
         draw.text(
+
             (853, 922),
-            str(mark),
+
+            mark,
+
             fill="black",
+
             font=font_mark
         )
 
@@ -226,9 +327,13 @@ def generate_certificate():
         # =========================
 
         draw.text(
+
             (198, 1262),
+
             f"Certificate ID : {certificate_id}",
+
             fill="black",
+
             font=font_small
         )
 
@@ -237,18 +342,24 @@ def generate_certificate():
         # =========================
 
         draw.text(
+
             (1450, 1262),
+
             f"Date of Issue : {issue_date}",
+
             fill="black",
+
             font=font_small
         )
 
         # =========================
-        # SAVE PNG TEMP
+        # TEMP IMAGE PATH
         # =========================
 
         image_path = os.path.join(
+
             TEMP_FOLDER,
+
             f"{certificate_id}.png"
         )
 
@@ -261,29 +372,43 @@ def generate_certificate():
         # =========================
 
         pdf_path = os.path.join(
+
             TEMP_FOLDER,
+
             f"{certificate_id}.pdf"
         )
 
         c = canvas.Canvas(
+
             pdf_path,
-            pagesize=(image.width, image.height)
+
+            pagesize=(
+                image.width,
+                image.height
+            )
         )
 
-        certificate_image = ImageReader(image_path)
+        certificate_image = ImageReader(
+            image_path
+        )
 
         c.drawImage(
+
             certificate_image,
+
             0,
+
             0,
+
             width=image.width,
+
             height=image.height
         )
 
         c.save()
 
         # =========================
-        # UPLOAD PNG TO CLOUDINARY
+        # UPLOAD IMAGE
         # =========================
 
         png_upload = cloudinary.uploader.upload(
@@ -295,24 +420,24 @@ def generate_certificate():
             resource_type="image"
         )
 
+        image_url = png_upload["secure_url"]
+
         # =========================
-        # UPLOAD PDF TO CLOUDINARY
+        # UPLOAD PDF
         # =========================
 
         pdf_upload = cloudinary.uploader.upload(
 
             pdf_path,
 
+            resource_type="raw",
+
             folder="certificates/pdfs",
 
-            resource_type="image"
+            use_filename=True,
+
+            unique_filename=False
         )
-
-        # =========================
-        # URLS
-        # =========================
-
-        image_url = png_upload["secure_url"]
 
         pdf_url = pdf_upload["secure_url"]
 
@@ -321,16 +446,34 @@ def generate_certificate():
         # =========================
 
         if image_url.startswith("https//"):
+
             image_url = image_url.replace(
+
                 "https//",
+
                 "https://"
             )
 
         if pdf_url.startswith("https//"):
+
             pdf_url = pdf_url.replace(
+
                 "https//",
+
                 "https://"
             )
+
+        # =========================
+        # FORCE DOWNLOADABLE PDF
+        # =========================
+
+        pdf_url = pdf_url.replace(
+
+            "/raw/upload/",
+
+            "/raw/upload/fl_attachment/"
+        )
+
         # =========================
         # SAVE TO MONGODB
         # =========================
@@ -358,17 +501,25 @@ def generate_certificate():
             "pdf_url": pdf_url
         }
 
-        certificates.insert_one(certificate_data)
+        certificates.insert_one(
+            certificate_data
+        )
 
         # =========================
         # DELETE TEMP FILES
         # =========================
 
         if os.path.exists(image_path):
+
             os.remove(image_path)
 
         if os.path.exists(pdf_path):
+
             os.remove(pdf_path)
+
+        # =========================
+        # RESPONSE
+        # =========================
 
         return jsonify({
 
@@ -395,60 +546,106 @@ def generate_certificate():
 # VERIFY CERTIFICATE
 # =========================
 
-@app.route('/verify/<certificate_id>', methods=['GET'])
+@app.route(
+    "/verify/<certificate_id>",
+    methods=["GET"]
+)
 def verify_certificate(certificate_id):
 
-    certificate = certificates.find_one({
+    try:
 
-        "certificate_id": certificate_id
+        certificate = certificates.find_one({
 
-    })
+            "certificate_id": certificate_id
+        })
 
-    if certificate:
+        if certificate:
+
+            return jsonify({
+
+                "success": True,
+
+                "name": certificate["name"],
+
+                "domain": certificate["domain"],
+
+                "mark": certificate["mark"],
+
+                "batch": certificate["batch"],
+
+                "group": certificate[
+                    "student_group"
+                ],
+
+                "issue_date": certificate[
+                    "issue_date"
+                ],
+
+                "image_url": certificate[
+                    "image_url"
+                ],
+
+                "pdf_url": certificate[
+                    "pdf_url"
+                ]
+            })
 
         return jsonify({
 
-            "success": True,
+            "success": False,
 
-            "name": certificate["name"],
+            "message": "Certificate Not Found"
 
-            "domain": certificate["domain"],
+        }), 404
 
-            "mark": certificate["mark"],
+    except Exception as e:
 
-            "batch": certificate["batch"],
+        return jsonify({
 
-            "group": certificate["student_group"],
+            "success": False,
 
-            "issue_date": certificate["issue_date"],
+            "error": str(e)
 
-            "image_url": certificate["image_url"],
-
-            "pdf_url": certificate["pdf_url"]
-        })
-
-    return jsonify({
-
-        "success": False,
-
-        "message": "Certificate Not Found"
-
-    })
+        }), 500
 
 # =========================
 # ALL CERTIFICATES
 # =========================
 
-@app.route('/all-certificates', methods=['GET'])
+@app.route(
+    "/all-certificates",
+    methods=["GET"]
+)
 def all_certificates():
 
-    all_data = list(certificates.find({}, {
+    try:
 
-        "_id": 0
+        all_data = list(
 
-    }))
+            certificates.find(
 
-    return jsonify(all_data)
+                {},
+
+                {"_id": 0}
+            )
+        )
+
+        return jsonify({
+
+            "success": True,
+
+            "data": all_data
+        })
+
+    except Exception as e:
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(e)
+
+        }), 500
 
 # =========================
 # MAIN
@@ -456,9 +653,17 @@ def all_certificates():
 
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT", 5000))
+    port = int(
+
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
 
     app.run(
+
         host="0.0.0.0",
+
         port=port
     )
