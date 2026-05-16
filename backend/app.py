@@ -303,8 +303,13 @@ def generate_certificate():
         )
 
         image_url = png_upload["secure_url"]
+        if image_url.startswith("https//"):
+            image_url = image_url.replace("https//", "https://")
 
         pdf_url = pdf_upload["secure_url"]
+
+        if pdf_url.startswith("https//"):
+            pdf_url = pdf_url.replace("https//", "https://")
 
         # =========================
         # SAVE TO MONGODB
